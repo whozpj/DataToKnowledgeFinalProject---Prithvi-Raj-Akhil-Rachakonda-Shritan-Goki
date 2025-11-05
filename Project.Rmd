@@ -223,4 +223,6 @@ Basketball Reference. (n.d.). *NBA & ABA League Index*. Sports Reference LLC. Re
 
 Basketball Reference. (n.d.). *NBA Per Game Stats*. Retrieved from https://www.basketball-reference.com/leagues/NBA_2019_per_game.html
 
+ChatGPT . Used ChatGPT to help grammar check and format written responses as well as debugging plotGG code.
+
 *Data files*: NBA2019.csv, NBA2020.csv, NBA2021.csv, NBA2022.csv (included in GitHub repository)
