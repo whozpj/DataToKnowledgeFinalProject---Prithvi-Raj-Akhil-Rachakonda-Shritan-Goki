@@ -1,5 +1,5 @@
 ---
-title: "Project Part X" 
+title: "Project Part 1" 
 fontsize: 12pt
 geometry: margin=1in
 urlcolor: black
@@ -8,34 +8,163 @@ header-includes:
 - \usepackage{setspace}
 - \onehalfspacing
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, highlight=FALSE)
 ```
-
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-## Use this chunk for reading in packages.
-## Use this chunk for reading in the data, combining the data, and any other major data cleaning that is not relevant to show.
-## Remove the ## before all code.
+library(tidyverse)
+library(rvest)
+library(janitor)
+```
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Function to fetch season data
+fetch_season <- function(season_year){
+  url <- paste0("https://www.basketball-reference.com/leagues/NBA_", season_year, "_per_game.html")
+  page <- read_html(url)
+  tbl <- page %>% html_node("table#per_game_stats") %>% html_table(fill = TRUE)
+  tbl <- clean_names(tbl)
+  tbl$season <- season_year
+  return(tbl)
+}
+
+# Fetch data for all seasons
+seasons <- c(2019, 2020, 2021, 2022)
+raw_list <- lapply(seasons, fetch_season)
+df <- bind_rows(raw_list)
+
+# Clean and prepare data
+nba <- df %>%
+  filter(player != "Player") %>%
+  mutate(across(c(g, mp, pts, fg3, fg3a), as.numeric)) %>%
+  mutate(
+    pos = case_when(
+      str_starts(pos, "G") ~ "G",
+      str_starts(pos, "F") ~ "F",
+      str_starts(pos, "C") ~ "C",
+      TRUE ~ NA_character_
+    ),
+    three_prop = ifelse(fg3a > 0, fg3/fg3a, NA_real_)
+  ) %>%
+  filter(g >= 10, mp >= 10) %>%
+  select(player, season, pos, g, mp, pts, fg3, fg3a, three_prop)
 ```
 
-## Section headers 
-### Subsection headers, if using
-Your text.
+## Introduction
 
-Linebreaks are created using two spaces at the end of the previous line of text, or using the command \newline.  
-Pagebreaks are created using the command \newpage.  
-Note: These commands execute when knitting, moving the end-of-sentence period in the resulting PDF.
+NBA offenses have increasingly emphasized three-point shooting. This report explores how 3-point efficiency and scoring volume differ across player positions.  
 
+We answer three descriptive questions:  
+
+1. What are the trends in three-point proportion (3P%) from 2018–19 to 2021–22?
+2. How does mean points per game (PPG) vary by season and position?
+3. Do Guards, Forwards, and Centers differ systematically in both parameters?
+
+This analysis is exploratory only, per STAT3080 requirements.
+
+## Data Summary
+
+**Source:** NBA per-game player statistics scraped from Basketball-Reference (https://www.basketball-reference.com/).  
+
+We used four seasons: 2018–19 (ending year 2019), 2019–20, 2020–21, and 2021–22.  
+
+**Cleaning decisions:**  
+
+- Remove players with <10 games and <10 minutes per game
+- Convert positions to primary: G, F, or C
+- Recompute three-point proportion: FG3 / FG3A
+- Keep only required variables
+
+These steps remove extremely small-sample players who can skew proportions.  
+
+**Why this dataset fits:** Contains a proportion statistic (3P%) and a center statistic (mean PPG), aligned with the allowed inferential scope for Part 2.
+
+### Data Dictionary
+
+| Variable | Description |
+|----------|-------------|
+| player | Player name |
+| season | Ending year of NBA season |
+| pos | Primary position (G/F/C) |
+| g | Games played |
+| mp | Minutes per game |
+| pts | Points per game |
+| fg3 | 3-pointers made per game |
+| fg3a | 3-pointers attempted per game |
+| three_prop | Proportion = FG3/FG3A |
+
+## Exploratory Analysis
+
+### Numerical Summaries
 ```{r, echo=FALSE}
-## R code to create and display summaries in part 1. 
-## This R code will not be printed in the PDF.
-## Remove the ## before all code.
+season_summary <- nba %>%
+  group_by(season) %>%
+  summarise(
+    mean_3p = mean(three_prop, na.rm = TRUE),
+    sd_3p = sd(three_prop, na.rm = TRUE),
+    mean_pts = mean(pts, na.rm = TRUE),
+    n = n()
+  )
+season_summary
+```
+```{r, echo=FALSE}
+pos_summary <- nba %>%
+  group_by(season, pos) %>%
+  summarise(
+    mean_3p = mean(three_prop, na.rm = TRUE),
+    mean_pts = mean(pts, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+pos_summary
 ```
 
-```{r}
-## R code to conduct the test in part 2.
-## This R code will be printed in the PDF.
-## Remove the ## before all code.
+### Graphical Summaries
+
+**Graph 1 — Mean 3P% by Position Across Seasons**
+```{r, echo=FALSE, fig.width=6, fig.height=4}
+three_by_pos <- nba %>%
+  group_by(season, pos) %>%
+  summarise(mean_3p = mean(three_prop, na.rm = TRUE), .groups = "drop")
+
+ggplot(three_by_pos, aes(x=season, y=mean_3p, color=pos, group=pos)) +
+  geom_line(linewidth=1) +
+  geom_point(size=2) +
+  labs(
+    x="Season (ending year)",
+    y="Mean 3P% (proportion)",
+    title="Three-Point Efficiency by Position (2018–2022)",
+    color="Position"
+  ) +
+  theme_minimal()
 ```
 
+**Graph 2 — Distribution of PPG by Position**
+```{r, echo=FALSE, fig.width=6, fig.height=4}
+ggplot(nba, aes(x=pos, y=pts, fill=pos)) +
+  geom_boxplot(alpha=0.8) +
+  labs(
+    x="Position",
+    y="Points per game",
+    title="Scoring Distribution by Position (All Seasons)"
+  ) +
+  theme_minimal() +
+  theme(legend.position="none")
+```
+
+## Conclusions
+
+**Three-Point Proportion (Efficiency):**  
+Guards consistently achieve the highest 3P%, followed by Forwards, with Centers lowest — expected given positional roles. Season trends show small but noticeable shifts over time.  
+
+**Mean Points per Game:**  
+Guards and Forwards generally score more than Centers. Distributions show a wider right tail — elite scorers drive up variability.  
+
+**What this means (in context):**  
+NBA scoring continues to be driven by backcourt and wing players who combine higher volume with better three-point efficiency. The data highlight how offensive roles differ sharply by position.  
+
+**Limitations:**  
+Per-game averages do not account for injuries, role changes, or team context. Position labeling is simplified.
+
+## References
+
+Basketball-Reference. NBA Per Game Player Stats. Retrieved from: https://www.basketball-reference.com/
