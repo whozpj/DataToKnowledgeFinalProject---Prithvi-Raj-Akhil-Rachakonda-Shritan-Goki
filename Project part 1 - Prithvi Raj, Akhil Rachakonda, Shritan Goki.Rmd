@@ -3,7 +3,6 @@ title: "Project Part 1"
 
 fontsize: 12pt
 geometry: margin=1in
-author: 'Prithvi Raj, Akhil Rachakonda, Shritan Goki'
 urlcolor: black
 output: pdf_document
 header-includes:
@@ -14,8 +13,6 @@ header-includes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, highlight=FALSE)
 ```
-
-Link to Github Repository: https://github.com/whozpj/DataToKnowledgeFinalProject---Prithvi-Raj-Akhil-Rachakonda-Shritan-Goki
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Load required packages
