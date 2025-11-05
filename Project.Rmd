@@ -29,20 +29,20 @@ nba_data <- bind_rows(nba_2019, nba_2020, nba_2021, nba_2022)
 
 # Clean data: remove rows with missing critical values
 nba_clean <- nba_data %>%
-  filter(!is.na(PTS), !is.na(FGA), !is.na(`3P`), FGA > 0)
+  filter(!is.na(PTS), !is.na(FGA), !is.na(`3P`), FGA > 0)
 
 # Calculate league-wide statistics by season
 season_stats <- nba_clean %>%
-  group_by(Season) %>%
-  summarise(
-    Total_Points = sum(PTS, na.rm = TRUE),
-    Total_3P_Points = sum(`3P` * 3, na.rm = TRUE),
-    Total_FGA = sum(FGA, na.rm = TRUE),
-    Total_FG = sum(FG, na.rm = TRUE),
-    Prop_3P_Points = Total_3P_Points / Total_Points,
-    Points_Per_FGA = Total_Points / Total_FGA,
-    .groups = "drop"
-  )
+  group_by(Season) %>%
+  summarise(
+    Total_Points = sum(PTS, na.rm = TRUE),
+    Total_3P_Points = sum(`3P` * 3, na.rm = TRUE),
+    Total_FGA = sum(FGA, na.rm = TRUE),
+    Total_FG = sum(FG, na.rm = TRUE),
+    Prop_3P_Points = Total_3P_Points / Total_Points,
+    Points_Per_FGA = Total_Points / Total_FGA,
+    .groups = "drop"
+  )
 ```
 
 ## Introduction
@@ -100,93 +100,93 @@ Despite these limitations, the data appropriately address the research questions
 
 ```{r, echo=FALSE}
 season_summary <- season_stats %>%
-  select(Season, Total_Points, Total_3P_Points, Total_FGA, 
-         Prop_3P_Points, Points_Per_FGA) %>%
-  mutate(
-    Prop_3P_Points = round(Prop_3P_Points, 4),
-    Points_Per_FGA = round(Points_Per_FGA, 3)
-  )
+  select(Season, Total_Points, Total_3P_Points, Total_FGA, 
+         Prop_3P_Points, Points_Per_FGA) %>%
+  mutate(
+    Prop_3P_Points = round(Prop_3P_Points, 4),
+    Points_Per_FGA = round(Points_Per_FGA, 3)
+  )
 
 kable(season_summary, 
-      col.names = c("Season", "Total Points", "3P Points", "Total FGA", 
-                    "Prop. from 3P", "Pts/FGA"),
-      caption = "League-wide scoring statistics by season",
-      format.args = list(big.mark = ","))
+      col.names = c("Season", "Total Points", "3P Points", "Total FGA", 
+                    "Prop. from 3P", "Pts/FGA"),
+      caption = "League-wide scoring statistics by season",
+      format.args = list(big.mark = ","))
 ```
 
 ### Numerical Summary 2: Change Over Time
 
 ```{r, echo=FALSE}
 change_stats <- data.frame(
-  Metric = c("Proportion from 3-Pointers", "Points per FGA"),
-  `2019` = c(season_stats$Prop_3P_Points[1], season_stats$Points_Per_FGA[1]),
-  `2022` = c(season_stats$Prop_3P_Points[4], season_stats$Points_Per_FGA[4]),
-  Change = c(
-    season_stats$Prop_3P_Points[4] - season_stats$Prop_3P_Points[1],
-    season_stats$Points_Per_FGA[4] - season_stats$Points_Per_FGA[1]
-  ),
-  Percent_Change = c(
-    ((season_stats$Prop_3P_Points[4] - season_stats$Prop_3P_Points[1]) / 
-       season_stats$Prop_3P_Points[1]) * 100,
-    ((season_stats$Points_Per_FGA[4] - season_stats$Points_Per_FGA[1]) / 
-       season_stats$Points_Per_FGA[1]) * 100
-  )
+  Metric = c("Proportion from 3-Pointers", "Points per FGA"),
+  `2019` = c(season_stats$Prop_3P_Points[1], season_stats$Points_Per_FGA[1]),
+  `2022` = c(season_stats$Prop_3P_Points[4], season_stats$Points_Per_FGA[4]),
+  Change = c(
+    season_stats$Prop_3P_Points[4] - season_stats$Prop_3P_Points[1],
+    season_stats$Points_Per_FGA[4] - season_stats$Points_Per_FGA[1]
+  ),
+  Percent_Change = c(
+    ((season_stats$Prop_3P_Points[4] - season_stats$Prop_3P_Points[1]) / 
+       season_stats$Prop_3P_Points[1]) * 100,
+    ((season_stats$Points_Per_FGA[4] - season_stats$Points_Per_FGA[1]) / 
+       season_stats$Points_Per_FGA[1]) * 100
+  )
 )
 
 kable(change_stats, 
-      col.names = c("Metric", "2019 Value", "2022 Value", 
-                    "Absolute Change", "% Change"),
-      digits = 4,
-      caption = "Change in key metrics from 2019 to 2022")
+      col.names = c("Metric", "2019 Value", "2022 Value", 
+                    "Absolute Change", "% Change"),
+      digits = 4,
+      caption = "Change in key metrics from 2019 to 2022")
 ```
 
 ### Graphical Summary 1: Proportion of Points from Three-Pointers
 
 ```{r, echo=FALSE, fig.width=7, fig.height=4, fig.align='center'}
 ggplot(season_stats, aes(x = Season, y = Prop_3P_Points)) +
-  geom_line(color = "#1f77b4", linewidth = 1.2) +
-  geom_point(color = "#1f77b4", size = 3) +
-  geom_text(aes(label = sprintf("%.2f%%", Prop_3P_Points * 100)), 
-            vjust = -1, size = 3.5) +
-  scale_x_continuous(breaks = c(2019, 2020, 2021, 2022)) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1),
-                     limits = c(0.30, 0.39)) +
-  labs(
-    title = "Proportion of Total Points from Three-Pointers (2019-2022)",
-    x = "Season",
-    y = "Proportion of Points from 3P",
-    caption = "Data source: Basketball Reference"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", size = 12),
-    axis.title = element_text(size = 10),
-    panel.grid.minor = element_blank()
-  )
+  geom_line(color = "#1f77b4", linewidth = 1.2) +
+  geom_point(color = "#1f77b4", size = 3) +
+  geom_text(aes(label = sprintf("%.2f%%", Prop_3P_Points * 100)), 
+            vjust = -1, size = 3.5) +
+  scale_x_continuous(breaks = c(2019, 2020, 2021, 2022)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1),
+                     limits = c(0.30, 0.39)) +
+  labs(
+    title = "Proportion of Total Points from Three-Pointers (2019-2022)",
+    x = "Season",
+    y = "Proportion of Points from 3P",
+    caption = "Data source: Basketball Reference"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    axis.title = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
 ```
 
 ### Graphical Summary 2: Scoring Efficiency Over Time
 
 ```{r, echo=FALSE, fig.width=7, fig.height=4, fig.align='center'}
 ggplot(season_stats, aes(x = Season, y = Points_Per_FGA)) +
-  geom_line(color = "#ff7f0e", linewidth = 1.2) +
-  geom_point(color = "#ff7f0e", size = 3) +
-  geom_text(aes(label = sprintf("%.3f", Points_Per_FGA)), 
-            vjust = -1, size = 3.5) +
-  scale_x_continuous(breaks = c(2019, 2020, 2021, 2022)) +
-  scale_y_continuous(limits = c(1.20, 1.26)) +
-  labs(
-    title = "NBA Scoring Efficiency: Points per Field Goal Attempt (2019-2022)",
-    x = "Season",
-    y = "Points per Field Goal Attempt",
-    caption = "Data source: Basketball Reference"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", size = 12),
-    axis.title = element_text(size = 10),
-    panel.grid.minor = element_blank()
-  )
+  geom_line(color = "#ff7f0e", linewidth = 1.2) +
+  geom_point(color = "#ff7f0e", size = 3) +
+  geom_text(aes(label = sprintf("%.3f", Points_Per_FGA)), 
+            vjust = -1, size = 3.5) +
+  scale_x_continuous(breaks = c(2019, 2020, 2021, 2022)) +
+  scale_y_continuous(limits = c(1.20, 1.26)) +
+  labs(
+    title = "NBA Scoring Efficiency: Points per Field Goal Attempt (2019-2022)",
+    x = "Season",
+    y = "Points per Field Goal Attempt",
+    caption = "Data source: Basketball Reference"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    axis.title = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
 ```
 
 ## Conclusions
