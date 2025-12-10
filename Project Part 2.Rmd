@@ -181,4 +181,4 @@ Moore, D. S., Notz, W. I., & Fligner, M. A. (2017). *The Basic Practice of Stati
 
 *Data files*: NBA2019.csv, NBA2020.csv, NBA2021.csv, NBA2022.csv (included in GitHub repository)
 
-*AI tools were used to assist with code development and report writing.*
+*AI tools were used to assist with code syntax and report writing.*
