@@ -1,0 +1,249 @@
+---
+title: "Project Part 2" 
+
+fontsize: 12pt
+geometry: margin=1in
+author: 'Prithvi Raj, Akhil Rachakonda, Shritan Goki'
+urlcolor: black
+output: pdf_document
+header-includes:
+- \usepackage{setspace}
+- \onehalfspacing
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, highlight=FALSE)
+```
+
+Link to Github Repository: https://github.com/whozpj/DataToKnowledgeFinalProject---Prithvi-Raj-Akhil-Rachakonda-Shritan-Goki
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Load required packages
+library(tidyverse)
+library(knitr)
+library(gridExtra)
+
+# Read in all four seasons of NBA data
+nba_2019 <- read_csv("NBA2019.csv", show_col_types = FALSE) %>% mutate(Season = 2019)
+nba_2020 <- read_csv("NBA2020.csv", show_col_types = FALSE) %>% mutate(Season = 2020)
+nba_2021 <- read_csv("NBA2021.csv", show_col_types = FALSE) %>% mutate(Season = 2021)
+nba_2022 <- read_csv("NBA2022.csv", show_col_types = FALSE) %>% mutate(Season = 2022)
+
+# Combine all seasons
+nba_data <- bind_rows(nba_2019, nba_2020, nba_2021, nba_2022)
+
+# Clean data: remove rows with missing critical values
+nba_clean <- nba_data %>%
+  filter(!is.na(PTS), !is.na(FGA), !is.na(`3P`), FGA > 0)
+
+# Calculate league-wide statistics by season
+season_stats <- nba_clean %>%
+  group_by(Season) %>%
+  summarise(
+    Total_Points = sum(PTS, na.rm = TRUE),
+    Total_3P_Points = sum(`3P` * 3, na.rm = TRUE),
+    Total_FGA = sum(FGA, na.rm = TRUE),
+    Total_FG = sum(FG, na.rm = TRUE),
+    Prop_3P_Points = Total_3P_Points / Total_Points,
+    Points_Per_FGA = Total_Points / Total_FGA,
+    .groups = "drop"
+  )
+
+# Extract data for 2019 and 2022 seasons for hypothesis test
+nba_2019_data <- nba_clean %>% filter(Season == 2019)
+nba_2022_data <- nba_clean %>% filter(Season == 2022)
+
+# Calculate totals for hypothesis test
+x1 <- sum(nba_2019_data$`3P` * 3, na.rm = TRUE)  # Total 3P points in 2019
+n1 <- sum(nba_2019_data$PTS, na.rm = TRUE)        # Total points in 2019
+p1 <- x1 / n1                                      # Proportion in 2019
+
+x2 <- sum(nba_2022_data$`3P` * 3, na.rm = TRUE)  # Total 3P points in 2022
+n2 <- sum(nba_2022_data$PTS, na.rm = TRUE)        # Total points in 2022
+p2 <- x2 / n2                                      # Proportion in 2022
+
+# Conduct hypothesis test (stored for inline references)
+prop_test_result <- prop.test(x = c(x1, x2), n = c(n1, n2), alternative = "less", correct = FALSE)
+```
+
+## Introduction
+
+In Part 1 of this project, exploratory analysis revealed a clear upward trend in the proportion of total points scored from three-point field goals in the NBA from 2019 to 2022. The proportion increased from approximately 31.6% in 2019 to 33.5% in 2022, representing a 1.9 percentage point increase. However, exploratory analysis alone cannot determine whether this observed change represents a statistically significant shift in offensive strategy or could reasonably be attributed to natural variation.
+
+**Has the proportion of total points scored from three-point field goals increased in the NBA from 2019 to 2022?**
+
+This research question was selected for hypothesis testing because it addresses a fundamental strategic shift in modern basketball and showed a clear directional trend in the exploratory analysis. The question is well-suited for statistical inference because it compares two distinct time periods (2019 vs. 2022) and involves a proportion that can be precisely measured from the available data. While the exploratory analysis suggested an increase, hypothesis testing will determine whether this change is statistically significant or could have occurred by chance.
+
+The data used in this analysis comes from Basketball Reference (https://www.basketball-reference.com/), a comprehensive repository of NBA statistics. The dataset includes player-level per-game statistics for the 2018-19 season (labeled 2019) and the 2021-22 season (labeled 2022). These data represent all NBA players who appeared in games during these seasons, with official statistics recorded by the NBA including field goals made and attempted, three-pointers made and attempted, and points scored.
+
+The data are appropriate for answering this research question because they provide complete league-wide coverage of all scoring events across both seasons. By aggregating player-level statistics, we can calculate the total number of points scored from three-pointers and the total number of points scored overall for each season, enabling a direct comparison of proportions. The data have been cleaned to remove players with missing values for critical variables (points, three-pointers) and players with zero field goal attempts, ensuring accurate calculations.
+
+## Methods
+
+### Test Selection
+
+A **two-sample z-test for proportions** was selected to answer the research question. This test is appropriate because:
+
+1. **Parameter tested**: The test compares two population proportions (p₁ for 2019 and p₂ for 2022), where each proportion represents the proportion of total points scored from three-point field goals in that season.
+
+2. **Test type**: This is a two-sample test comparing proportions from two independent populations (the 2019 NBA season and the 2022 NBA season).
+
+3. **Research question alignment**: The test directly addresses whether the proportion of points from three-pointers in 2022 is greater than in 2019, which matches the research question.
+
+### Test Assumptions
+
+The two-sample z-test for proportions requires the following assumptions, each of which must be verified:
+
+#### 1. Independent Samples
+
+The 2019 and 2022 NBA seasons represent independent samples. These are distinct time periods with different rosters, different game schedules, and different competitive contexts. The outcomes of games and scoring patterns in 2019 do not influence those in 2022, satisfying the independence assumption.
+
+#### 2. Large Sample Sizes (Normality Assumption)
+
+The sampling distribution of the difference in sample proportions is approximately normal when both samples are sufficiently large. According to standard statistical theory (e.g., Agresti & Franklin, 2013; Moore et al., 2017), the sampling distribution of the difference in sample proportions is approximately normal when both samples satisfy np ≥ 10 and n(1-p) ≥ 10, where n is the sample size and p is the proportion.
+
+For the 2019 season:
+- Total points (n₁): `r format(round(n1, 0), big.mark = ",")`
+- Total 3P points (x₁): `r format(round(x1, 0), big.mark = ",")`
+- Sample proportion (p₁): `r round(p1, 4)`
+- n₁p₁ = `r format(round(n1 * p1, 0), big.mark = ",")` ≥ 10 ✓
+- n₁(1-p₁) = `r format(round(n1 * (1 - p1), 0), big.mark = ",")` ≥ 10 ✓
+
+For the 2022 season:
+- Total points (n₂): `r format(round(n2, 0), big.mark = ",")`
+- Total 3P points (x₂): `r format(round(x2, 0), big.mark = ",")`
+- Sample proportion (p₂): `r round(p2, 4)`
+- n₂p₂ = `r format(round(n2 * p2, 0), big.mark = ",")` ≥ 10 ✓
+- n₂(1-p₂) = `r format(round(n2 * (1 - p2), 0), big.mark = ",")` ≥ 10 ✓
+
+Both samples easily satisfy the large sample size requirement. To verify the normality assumption, a simulation of the sampling distribution of the difference in proportions was conducted, as shown in the histogram below:
+
+```{r, echo=FALSE, fig.width=7, fig.height=4, fig.align='center', warning=FALSE}
+# Simulate sampling distribution of difference in proportions
+set.seed(123)
+n_sim <- 10000
+diff_sim <- numeric(n_sim)
+
+# Simulate under null hypothesis (p1 = p2 = pooled proportion)
+p_pooled <- (x1 + x2) / (n1 + n2)
+
+for (i in 1:n_sim) {
+  # Simulate sample proportions
+  p1_sim <- rbinom(1, size = round(n1), prob = p_pooled) / round(n1)
+  p2_sim <- rbinom(1, size = round(n2), prob = p_pooled) / round(n2)
+  diff_sim[i] <- p2_sim - p1_sim
+}
+
+# Create histogram with normal overlay
+sim_data <- data.frame(diff = diff_sim)
+mean_diff <- mean(diff_sim)
+sd_diff <- sd(diff_sim)
+
+ggplot(sim_data, aes(x = diff)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "steelblue", alpha = 0.7, color = "white") +
+  stat_function(fun = dnorm, args = list(mean = mean_diff, sd = sd_diff), 
+                color = "red", linewidth = 1.2) +
+  labs(
+    title = "Sampling Distribution of Difference in Proportions (p₂ - p₁)",
+    subtitle = "Simulated under null hypothesis with normal distribution overlay",
+    x = "Difference in Sample Proportions",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 11),
+    plot.subtitle = element_text(size = 9),
+    axis.title = element_text(size = 10)
+  )
+```
+
+The histogram shows that the simulated sampling distribution of the difference in proportions closely follows a normal distribution (red curve), confirming that the normality assumption is satisfied. The large sample sizes (n₁p₁, n₁(1-p₁), n₂p₂, and n₂(1-p₂) all well exceed 10) ensure that the Central Limit Theorem applies, making the normal approximation appropriate for this test.
+
+#### 3. Random Sampling
+
+While the data represent a population of all NBA players in these seasons, we treat the seasons as representative samples from the broader population of NBA seasons. The data collection process (official NBA statistics) ensures comprehensive and unbiased recording of all scoring events, satisfying the random sampling assumption for practical purposes.
+
+### Statistical Hypotheses
+
+The statistical hypotheses corresponding to the research question are:
+
+- **H₀**: p₁ = p₂ (The proportion of points from three-pointers in 2019 equals the proportion in 2022)
+- **Hₐ**: p₁ < p₂ (The proportion of points from three-pointers in 2019 is less than the proportion in 2022)
+
+where p₁ represents the true proportion of total points scored from three-point field goals in the 2019 NBA season, and p₂ represents the true proportion in the 2022 NBA season.
+
+This is a one-sided (upper-tailed) test because the research question specifically asks whether the proportion has *increased* from 2019 to 2022. The alternative hypothesis reflects the directional expectation from the exploratory analysis.
+
+## Results
+
+The two-sample z-test for proportions was conducted using R to compare the proportion of points from three-pointers between the 2019 and 2022 seasons:
+
+```{r, echo=TRUE}
+# Conduct two-sample z-test for proportions
+# H0: p1 = p2, Ha: p1 < p2 (one-sided upper-tailed test)
+
+prop_test_result <- prop.test(x = c(x1, x2), n = c(n1, n2), alternative = "less", correct = FALSE)
+prop_test_result
+```
+
+The test output provides the following key components:
+
+- **Sample proportions**: The estimated proportion for 2019 is `r round(p1, 4)` (31.6%) and for 2022 is `r round(p2, 4)` (33.5%).
+
+- **Test statistic**: The z-statistic is `r round(prop_test_result$statistic, 4)`, calculated as the difference in sample proportions divided by the standard error of the difference.
+
+- **P-value**: The p-value for this one-sided test is `r format(prop_test_result$p.value, scientific = FALSE, digits = 6)`, representing the probability of observing a difference this large or larger if the true proportions were equal.
+
+- **95% confidence interval**: The confidence interval for the difference p₂ - p₁ is `r paste0("(", round(prop_test_result$conf.int[1], 6), ", ", round(prop_test_result$conf.int[2], 6), ")")`.
+
+**Statistical result**: At a significance level of α = 0.05, we reject the null hypothesis (p = `r format(prop_test_result$p.value, scientific = FALSE, digits = 6)` < 0.05). The p-value of `r format(prop_test_result$p.value, scientific = FALSE, digits = 6)` provides strong evidence against the null hypothesis that the proportions are equal. This indicates that the observed increase in the proportion of points from three-pointers from 2019 to 2022 is statistically significant and unlikely to have occurred by chance alone.
+
+## Conclusions
+
+The hypothesis test provides strong statistical evidence that the proportion of total points scored from three-point field goals has significantly increased in the NBA from 2019 to 2022. The test result (p = `r format(prop_test_result$p.value, scientific = FALSE, digits = 6)`, which is less than 0.05) indicates that the observed increase from 31.6% to 33.5% represents a real shift in offensive strategy rather than random variation. This finding confirms that NBA teams have meaningfully increased their reliance on three-point shooting as a central component of their offensive systems over this time period.
+
+The statistical significance of this change has important implications for understanding the evolution of professional basketball. The increase reflects a league-wide strategic shift toward perimeter-oriented basketball, driven by the mathematical advantage of three-pointers (worth 50% more than two-pointers) and the influence of analytics in team decision-making. This trend represents a fundamental change in how the game is played at the highest level.
+
+### Limitations
+
+Several limitations should be considered when interpreting these results:
+
+1. **Temporal scope**: The analysis compares only two seasons (2019 and 2022), providing a limited view of long-term trends. A more comprehensive analysis would examine multiple seasons or a longer time period to understand the full trajectory of this strategic shift.
+
+2. **COVID-19 impact**: The 2020 and 2021 seasons were affected by the COVID-19 pandemic, which may have influenced player performance, game conditions, and statistical patterns. While this analysis compares 2019 (pre-pandemic) to 2022 (post-pandemic), the intervening years' disruptions may have affected the natural evolution of offensive strategies.
+
+3. **Aggregation level**: The analysis aggregates player-level data to league-wide proportions, which may obscure important team-specific or player-specific variations in three-point strategy. Some teams may have increased their three-point emphasis more dramatically than others.
+
+4. **Causal inference**: While the test establishes a statistically significant increase, it does not establish causality or identify the specific factors driving this change (e.g., rule changes, coaching strategies, player skill development, analytics adoption).
+
+5. **Population vs. sample**: The data represent the complete population of NBA players in these seasons, but we treat them as samples for statistical inference. This approach is valid for generalizing to the broader population of NBA seasons, but the interpretation should acknowledge this framework.
+
+These limitations could be addressed in future work by: (1) expanding the analysis to include more seasons to examine longer-term trends, (2) conducting team-level or player-level analyses to identify which teams or players are driving the change, (3) incorporating additional variables (e.g., rule changes, coaching changes) to explore causal mechanisms, and (4) using time series methods to model the evolution of three-point emphasis over time.
+
+### Generalization
+
+The conclusion from this hypothesis test generalizes beyond the specific 2019 and 2022 seasons used in the analysis. The statistically significant increase suggests that the trend toward greater three-point emphasis is a real phenomenon in modern NBA basketball, not merely a feature of these two particular seasons. This finding supports the broader narrative that the NBA has undergone a fundamental strategic transformation toward perimeter-oriented offense.
+
+The results can be generalized to:
+- **Future NBA seasons**: The trend suggests that three-point emphasis will likely continue or increase in subsequent seasons, though the specific magnitude cannot be predicted from this analysis.
+- **Similar competitive contexts**: The findings may apply to other professional basketball leagues or competitive contexts where similar strategic considerations (point value of shots, defensive adaptations) are relevant.
+- **Strategic decision-making**: The statistical significance of the increase validates that teams' increased focus on three-point shooting represents a meaningful strategic shift rather than random variation, which has implications for coaching, player development, and roster construction.
+
+However, generalization should be tempered by recognition that the NBA is a dynamic system where strategic equilibria can shift. Defensive adaptations, rule changes, or other factors could alter the trajectory of three-point emphasis in ways not captured by this two-season comparison.
+
+\newpage
+
+## References
+
+Agresti, A., & Franklin, C. (2013). *Statistics: The Art and Science of Learning from Data* (3rd ed.). Pearson.
+
+Basketball Reference. (n.d.). *NBA & ABA League Index*. Sports Reference LLC. Retrieved from https://www.basketball-reference.com/
+
+Basketball Reference. (n.d.). *NBA Per Game Stats*. Retrieved from https://www.basketball-reference.com/leagues/NBA_2019_per_game.html
+
+Moore, D. S., Notz, W. I., & Fligner, M. A. (2017). *The Basic Practice of Statistics* (8th ed.). W. H. Freeman.
+
+*Data files*: NBA2019.csv, NBA2020.csv, NBA2021.csv, NBA2022.csv (included in GitHub repository)
+
+*AI tools were used to assist with code development and report writing.*
+
